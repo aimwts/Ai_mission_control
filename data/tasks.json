@@ -1,0 +1,6 @@
+[
+  { "id": "1", "title": "Initialize Project", "status": "done" },
+  { "id": "2", "title": "Build Bento Grid", "status": "in-progress" },
+  { "id": "3", "title": "Implement Kanban", "status": "todo" },
+  { "id": "4", "title": "Setup Local API", "status": "todo" }
+]

@@ -1,0 +1,5 @@
+{
+  "name": "Local Mission Control",
+  "description": "A bento-grid dashboard for managing local tasks, documentation, and project status.",
+  "requestFramePermissions": []
+}

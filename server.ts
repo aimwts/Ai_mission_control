@@ -48,6 +48,15 @@ async function startServer() {
     }
   });
 
+  app.post("/api/calendar", async (req, res) => {
+    try {
+      await fs.writeFile(path.join(DATA_DIR, "calendar.json"), JSON.stringify(req.body, null, 2));
+      res.json({ success: true });
+    } catch (e) {
+      res.status(500).json({ error: "Failed to save calendar events" });
+    }
+  });
+
   app.get("/api/docs", async (req, res) => {
     try {
       const files = await fs.readdir(DOCS_DIR);
@@ -64,6 +73,20 @@ async function startServer() {
       res.json({ content });
     } catch (e) {
       res.status(404).json({ error: "File not found" });
+    }
+  });
+
+  app.post("/api/docs", async (req, res) => {
+    try {
+      const { filename, content } = req.body;
+      if (!filename || !content) {
+        return res.status(400).json({ error: "Filename and content are required" });
+      }
+      const safeFilename = filename.endsWith(".md") ? filename : `${filename}.md`;
+      await fs.writeFile(path.join(DOCS_DIR, safeFilename), content);
+      res.json({ success: true });
+    } catch (e) {
+      res.status(500).json({ error: "Failed to save document" });
     }
   });
 

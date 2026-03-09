@@ -19,6 +19,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { LayoutGrid, Plus, MoreVertical } from 'lucide-react';
 import { Task } from '../types';
 import { cn } from '../lib/utils';
+import { supabase } from '../lib/supabase';
 
 interface SortableItemProps {
   task: Task;
@@ -79,17 +80,30 @@ export default function TasksCard() {
   );
 
   useEffect(() => {
-    fetch('/api/tasks')
-      .then(res => res.json())
-      .then(setTasks);
+    if (import.meta.env.VITE_SUPABASE_URL) {
+      // client‑side Supabase call
+      supabase.from('tasks').select('*').order('id', { ascending: true })
+        .then(({ data, error }) => {
+          if (error) console.error(error);
+          else setTasks(data || []);
+        });
+    } else {
+      fetch('/api/tasks')
+        .then(res => res.json())
+        .then(setTasks);
+    }
   }, []);
 
   const persistTasks = (newTasks: Task[]) => {
-    fetch('/api/tasks', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(newTasks)
-    });
+    if (import.meta.env.VITE_SUPABASE_URL) {
+      supabase.from('tasks').upsert(newTasks).catch(console.error);
+    } else {
+      fetch('/api/tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newTasks)
+      });
+    }
   };
 
   const handleAddTask = (e?: React.FormEvent) => {

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { FileText, ChevronRight, Search, Plus, X, Save } from 'lucide-react';
 import Markdown from 'react-markdown';
+import { supabase } from '../lib/supabase';
 
 export default function DocsCard() {
   const [files, setFiles] = useState<string[]>([]);
@@ -12,9 +13,16 @@ export default function DocsCard() {
   const [newContent, setNewContent] = useState('');
 
   const fetchFiles = () => {
-    fetch('/api/docs')
-      .then(res => res.json())
-      .then(setFiles);
+    if (import.meta.env.VITE_SUPABASE_URL) {
+      supabase.from('docs').select('filename').then(({ data, error }) => {
+        if (error) console.error(error);
+        else setFiles(data?.map((r: any) => r.filename) || []);
+      });
+    } else {
+      fetch('/api/docs')
+        .then(res => res.json())
+        .then(setFiles);
+    }
   };
 
   useEffect(() => {
@@ -22,27 +30,48 @@ export default function DocsCard() {
   }, []);
 
   const handleFileClick = async (file: string) => {
-    const res = await fetch(`/api/docs/${file}`);
-    const data = await res.json();
-    setContent(data.content);
-    setSelectedFile(file);
+    if (import.meta.env.VITE_SUPABASE_URL) {
+      const { data, error } = await supabase.from('docs').select('content').eq('filename', file).single();
+      if (error) console.error(error);
+      else if (data) {
+        setContent(data.content);
+        setSelectedFile(file);
+      }
+    } else {
+      const res = await fetch(`/api/docs/${file}`);
+      const data = await res.json();
+      setContent(data.content);
+      setSelectedFile(file);
+    }
   };
 
   const handleSaveNewDoc = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newFilename || !newContent) return;
 
-    const res = await fetch('/api/docs', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ filename: newFilename, content: newContent })
-    });
+    if (import.meta.env.VITE_SUPABASE_URL) {
+      const safeFilename = newFilename.endsWith('.md') ? newFilename : `${newFilename}.md`;
+      const { error } = await supabase.from('docs').upsert({ filename: safeFilename, content: newContent });
+      if (error) console.error(error);
+      else {
+        setIsCreating(false);
+        setNewFilename('');
+        setNewContent('');
+        fetchFiles();
+      }
+    } else {
+      const res = await fetch('/api/docs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ filename: newFilename, content: newContent })
+      });
 
-    if (res.ok) {
-      setIsCreating(false);
-      setNewFilename('');
-      setNewContent('');
-      fetchFiles();
+      if (res.ok) {
+        setIsCreating(false);
+        setNewFilename('');
+        setNewContent('');
+        fetchFiles();
+      }
     }
   };
 

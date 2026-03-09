@@ -14,6 +14,7 @@ import {
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Plus, X, Trash2 } from 'lucide-react';
 import { CalendarEvent } from '../types';
 import { cn } from '../lib/utils';
+import { supabase } from '../lib/supabase';
 
 export default function CalendarCard() {
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -22,9 +23,16 @@ export default function CalendarCard() {
   const [newEventTitle, setNewEventTitle] = useState('');
 
   const fetchEvents = () => {
-    fetch('/api/calendar')
-      .then(res => res.json())
-      .then(setEvents);
+    if (import.meta.env.VITE_SUPABASE_URL) {
+      supabase.from('calendar').select('*').order('date').then(({ data, error }) => {
+        if (error) console.error(error);
+        else setEvents(data || []);
+      });
+    } else {
+      fetch('/api/calendar')
+        .then(res => res.json())
+        .then(setEvents);
+    }
   };
 
   useEffect(() => {
@@ -32,11 +40,15 @@ export default function CalendarCard() {
   }, []);
 
   const persistEvents = (updatedEvents: CalendarEvent[]) => {
-    fetch('/api/calendar', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(updatedEvents)
-    });
+    if (import.meta.env.VITE_SUPABASE_URL) {
+      supabase.from('calendar').upsert(updatedEvents).catch(console.error);
+    } else {
+      fetch('/api/calendar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatedEvents)
+      });
+    }
   };
 
   const monthStart = startOfMonth(currentDate);
